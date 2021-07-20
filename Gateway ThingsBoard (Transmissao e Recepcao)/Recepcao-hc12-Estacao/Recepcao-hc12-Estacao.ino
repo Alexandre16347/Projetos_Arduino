@@ -1,3 +1,8 @@
+/*
+ * @autor Carlos Alexandre 
+ * date 2021-07-20
+ */
+
 #include <ArduinoJson.h>
 #include <SoftwareSerial.h>
 #include <PubSubClient.h>
@@ -29,7 +34,8 @@ SoftwareSerial HC12(D1, D2); // Esp8266
 // Configurações do ThingsBoard
 
 // O TOKEN do dispositivo é obtido na
-#define TOKEN "3aCqRyRimagHtDIzgsZ2"
+// guia Devices -> ESP8266 Sala de Estar
+#define TOKEN "token do device"
 
 // Endereço do servidor ThingsBoard
 char thingsboardServer[] = "IP do servidor ou URL do seu ThingsBoard";

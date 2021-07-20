@@ -2,8 +2,13 @@
 #include <PubSubClient.h>
 #include <ESP8266WiFi.h>
 #include <SDL_Arduino_INA3221.h>
+//#include "uFire_SHT20.h"
+//
+//
+//uFire_SHT20 sht20;
 
 SDL_Arduino_INA3221 ina3221(0x40);
+
 
 #define Canal_1 1
 #define Canal_2 2
@@ -16,9 +21,11 @@ SDL_Arduino_INA3221 ina3221(0x40);
 // Configurações do ThingsBoard
 // O TOKEN do dispositivo é obtido na
 // guia Devices -> ESP8266 Sala de Estar
-#define TOKEN "t6SrS9Bs3jsjzo40R4Se"
+#define TOKEN "YD7C25qcTjmiprrezEHE"
+
 // Endereço do servidor ThingsBoard
-char thingsboardServer[] = "docker.webfrequencia.com.br";
+char thingsboardServer[] = "alexandre.webfrequencia.com.br";
+
 // Tópico onde serão publicados os dados do sensor
 char topic_publish[] = "v1/devices/me/telemetry";
 
@@ -237,6 +244,7 @@ void sendTemperatureAndHumidity() {
   data["Corrente_DSN"] = ((ina3221.getCurrent_mA (Canal_2)) / 1000);
   data["Tensão_Circuito"] = ina3221.getBusVoltage_V (Canal_3);
   data["Corrente_Circuito"] = ((ina3221.getCurrent_mA (Canal_3)) / 1000);
+
 
 
   String payload;

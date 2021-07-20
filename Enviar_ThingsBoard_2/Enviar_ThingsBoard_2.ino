@@ -1,25 +1,35 @@
 #include <ArduinoJson.h>
 #include <PubSubClient.h>
 #include <ESP8266WiFi.h>
+#include <SDL_Arduino_INA3221.h>
 #include "uFire_SHT20.h"
 
 
 uFire_SHT20 sht20;
 
+SDL_Arduino_INA3221 ina3221(0x41);
+
+
+#define Canal_1 1
+#define Canal_2 2
+#define Canal_3 3
+
 // Configurações do Wifi
 #define WIFI_AP "Grafica"
 #define WIFI_PASSWORD "gr@fica1"
 
+//Definicao do tempo de dormida/sleep
+#define dorme 30e6 // 30 segundos // e6 = microsegundos
+
 // Configurações do ThingsBoard
 // O TOKEN do dispositivo é obtido na
 // guia Devices -> ESP8266 Sala de Estar
-#define TOKEN "6fiRWpkqtJF43rvYzgCJ"
-
-#define clientId "Teste_de_Telemetria"
+#define TOKEN "YD7C25qcTjmiprrezEHE"
 
 
 // Endereço do servidor ThingsBoard
-char thingsboardServer[] = "198.24.156.117";
+char thingsboardServer[] = "alexandre.webfrequencia.com.br";
+
 // Tópico onde serão publicados os dados do sensor
 char topic_publish[] = "v1/devices/me/telemetry";
 
@@ -61,7 +71,7 @@ void InitThingsBoard() {
   Serial.print("Conectando-se ao ThingsBoard ...");
   // Inicia conexão MQTT
   // Função connect(clientId, username, password)
-  if ( client.connect(clientId, TOKEN, NULL) ) {
+  if ( client.connect("Estacao", TOKEN, NULL) ) {
     // Imprime resultado da conexão MQTT, indicando que foi estabelecida
     Serial.println( "[MQTT DONE]" );
     // Inscreve para receber as solicitações RPC
@@ -95,30 +105,66 @@ void reconnect() {
 
 
 // Coleta dados do sensor e envia ao Servidor
-void sendTemperatureAndHumidity() {
+void sendTelemetry() {
 
   StaticJsonDocument <200> data;
   // Cria mensagem Json na variável data
   // Cria string payload
 
+  String payload;
+
+
+  //Dados do sensor de Temperatura e humidade;
   data["Temperatura"] = (String)sht20.temperature() + " °C";
   data["Umidade"] = (String)sht20.humidity() + " %";
+
+   //Minha localização
   data["latitude"] = -4.2795657;
   data["longitude"] = -41.7782000;
 
+  
 
-
-  String payload;
+  
   // Serializa a variável data para string payload
   serializeJson(data, payload);
+
   // Por fim, publica esta string no tópico especificado
   client.publish(topic_publish, payload.c_str());
+
   // Imprime o tópico e a mensagem enviados
   Serial.print("Publish in topic: ");
   Serial.print(topic_publish);
   Serial.print(" , message: ");
   Serial.print(payload.c_str());
   Serial.println();
+
+  StaticJsonDocument <200> data2;
+  String payload2;
+
+  //Dados da Placa e Bateria
+  data2["Tensão_Placa"] = ina3221.getBusVoltage_V (Canal_1);
+  data2["Corrente_Placa"] = ((ina3221.getCurrent_mA (Canal_1)) / 1000);
+  data2["Tensão_Stepdown"] = ina3221.getBusVoltage_V (Canal_2);
+  data2["Corrente_Stepdown"] = ((ina3221.getCurrent_mA (Canal_2)) / 1000);
+  data2["Tensão_Bateria"] = ina3221.getBusVoltage_V (Canal_3);
+  data2["Corrente_Bateria"] = ((ina3221.getCurrent_mA (Canal_3)) / 1000);
+
+
+  // Serializa a variável data para string payload
+  serializeJson(data2, payload2);
+
+  // Por fim, publica esta string no tópico especificado
+  client.publish(topic_publish, payload2.c_str());
+
+  // Imprime o tópico e a mensagem enviados
+  Serial.print("Publish in topic: ");
+  Serial.print(topic_publish);
+  Serial.print(" , message: ");
+  Serial.print(payload2.c_str());
+  Serial.println();
+
+
+  
 
 }
 
@@ -212,7 +258,7 @@ void setup() {
 
   // Função que inicia a conexão com o Access Point
   InitWiFi();
-  
+
   // Em seguida, configura a conexão MQTT
   client.setServer( thingsboardServer, 1883 );
   // Define função on_message como retorno de chamada MQTT
@@ -235,15 +281,15 @@ void setup() {
   // Se o intervalo de tempo for maior que 1s
   if ( millis() - last_time > 1000 ) {
     // Envia dados do sensor ao ThingsBoard
-    sendTemperatureAndHumidity();
+    sendTelemetry();
     last_time = millis();
   }
 
   delay(2000);
 
-  Serial.print("Agora o ESP vai dormir por 5 seg\n\n");
+  Serial.print("Agora o ESP vai dormir por 30 segundos\n\n");
   //Tempo do deepSleep 60e6 = 60000000 microssegundos
-  ESP.deepSleep(5e6);
+  ESP.deepSleep(dorme);
 }
 
 
