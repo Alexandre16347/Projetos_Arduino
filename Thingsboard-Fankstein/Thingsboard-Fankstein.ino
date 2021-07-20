@@ -1,4 +1,10 @@
+/*
+ * @autor Carlos Alexandre 
+ * date 2021-07-20
+ */
+
 #include <ArduinoJson.h>
+#include <SoftwareSerial.h>
 #include <PubSubClient.h>
 #include <ESP8266WiFi.h>
 #include <SDL_Arduino_INA3221.h>
@@ -7,16 +13,16 @@
 
 
 /*
- * O Esp8266 tem alguns problemas em usar a biblioteca uFire_SHT20
- * por isso antes de executar o codigo vc deve ir para
- * "Documents\Arduino\libraries\uFire_SHT20\src"
- * e editar os aquivos "uFire_SHT20_JSON" e "uFire_SHT20_MP"
- * apagando a primeira linha inteira onde tem  escrito ""#if __has_include" 
- * e a ultima linha onde tem escrito "#endif"
- * apos salve e compile seu codigo ".ino"
- */
+   O Esp8266 tem alguns problemas em usar a biblioteca uFire_SHT20
+   por isso antes de executar o codigo vc deve ir para
+   "Documents\Arduino\libraries\uFire_SHT20\src"
+   e editar os aquivos "uFire_SHT20_JSON" e "uFire_SHT20_MP"
+   apagando a primeira linha inteira onde tem  escrito ""#if __has_include"
+   e a ultima linha onde tem escrito "#endif"
+   apos salve e compile seu codigo ".ino"
+*/
 
- 
+
 uFire_SHT20 sht20;
 
 SDL_Arduino_INA3221 ina3221(0x41);
@@ -25,6 +31,15 @@ SDL_Arduino_INA3221 ina3221(0x41);
 #define Canal_1 1
 #define Canal_2 2
 #define Canal_3 3
+
+
+
+SoftwareSerial HC12(D3, D4); // Esp8266
+// Rx pino D1 (Ligar no Tx do outro)
+// Tx pino D2 (Ligar no Rx do outro)
+
+
+
 
 // Configurações do Wifi
 #define WIFI_AP "Grafica"
@@ -130,15 +145,24 @@ void sendTelemetry() {
   data["Temperatura"] = (String)sht20.temperature() + " °C";
   data["Umidade"] = (String)sht20.humidity() + " %";
 
-   //Minha localização
+  //Minha localização
   data["latitude"] = -4.2795657;
   data["longitude"] = -41.7782000;
 
-  
+  //Dados da Placa e Bateria
+  data["Tensão_Placa"] = ina3221.getBusVoltage_V (Canal_1);
+  data["Corrente_Placa"] = ((ina3221.getCurrent_mA (Canal_1)) / 1000);
+  //  data["Tensão_Stepdown"] = ina3221.getBusVoltage_V (Canal_2);
+  //  data["Corrente_Stepdown"] = ((ina3221.getCurrent_mA (Canal_2)) / 1000);
+  data["Tensão_Bateria"] = ina3221.getBusVoltage_V (Canal_3);
+  data["Corrente_Bateria"] = ((ina3221.getCurrent_mA (Canal_3)) / 1000);
 
-  
+
   // Serializa a variável data para string payload
   serializeJson(data, payload);
+  
+  //Comando usado para enviar o arquivo por HC12
+  serializeJson(data, HC12);
 
   // Por fim, publica esta string no tópico especificado
   client.publish(topic_publish, payload.c_str());
@@ -149,35 +173,6 @@ void sendTelemetry() {
   Serial.print(" , message: ");
   Serial.print(payload.c_str());
   Serial.println();
-
-  StaticJsonDocument <200> data2;
-  String payload2;
-
-  //Dados da Placa e Bateria
-  data2["Tensão_Placa"] = ina3221.getBusVoltage_V (Canal_1);
-  data2["Corrente_Placa"] = ((ina3221.getCurrent_mA (Canal_1)) / 1000);
-  data2["Tensão_Stepdown"] = ina3221.getBusVoltage_V (Canal_2);
-  data2["Corrente_Stepdown"] = ((ina3221.getCurrent_mA (Canal_2)) / 1000);
-  data2["Tensão_Bateria"] = ina3221.getBusVoltage_V (Canal_3);
-  data2["Corrente_Bateria"] = ((ina3221.getCurrent_mA (Canal_3)) / 1000);
-
-
-  // Serializa a variável data para string payload
-  serializeJson(data2, payload2);
-
-  // Por fim, publica esta string no tópico especificado
-  client.publish(topic_publish, payload2.c_str());
-
-  // Imprime o tópico e a mensagem enviados
-  Serial.print("Publish in topic: ");
-  Serial.print(topic_publish);
-  Serial.print(" , message: ");
-  Serial.print(payload2.c_str());
-  Serial.println();
-
-
-  
-
 }
 
 
@@ -264,9 +259,16 @@ void setup() {
   Serial.begin(9600);
   Wire.begin();
   sht20.begin();
+  HC12.begin(9600);   // Velocidade da Porta Serial do HC12
 
   Serial.println("\n\nligou!!!");
 
+
+  if (HC12.isListening()) {
+    Serial.println("OK");
+  } else {
+    Serial.println("NOK");
+  }
 
   // Função que inicia a conexão com o Access Point
   InitWiFi();
