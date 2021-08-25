@@ -127,8 +127,8 @@ void sendTelemetry() {
 
 
   //Dados do sensor de Temperatura e humidade;
-  data["Temperatura"] = (String)sht20.temperature() + " °C";
-  data["Umidade"] = (String)sht20.humidity() + " %";
+  data["Temperatura"] = (String)sht20.temperature();
+  data["Umidade"] = (String)sht20.humidity();
 
    //Minha localização
   data["latitude"] = -4.2795657;
